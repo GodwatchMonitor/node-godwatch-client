@@ -125,4 +125,22 @@ settings_page.grid(row=2,column=1);
 
 load_settings();
 
-root.mainloop();
+if __name__ == '__main__':
+    import itertools, glob
+
+    icons = itertools.cycle(glob.glob('*.ico'))
+    hover_text = "Godwatch Client"
+    menu_options = (
+        ('Report Now', None, report),
+        ('A sub-menu', None,
+            (
+                ('Say Hello to Simon', None, report),
+                ('Switch Icon', None, report),
+            )
+        )
+    )
+    def bye(sysTrayIcon): print('')
+
+    systrayicon.SysTrayIcon(next(icons), hover_text, menu_options, on_quit=bye, default_menu_index=1)
+
+    root.mainloop();
