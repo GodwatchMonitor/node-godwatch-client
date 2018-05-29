@@ -160,9 +160,7 @@ if __name__ == '__main__':
 
     def maximize_to_gui(sysTrayIcon):
         global gui_up;
-        print(gui_up);
         gui_up = True;
-        print(gui_up);
         sysTrayIcon.execute_menu_option(1025);
         build_gui(root);
 
@@ -173,10 +171,23 @@ if __name__ == '__main__':
         ('Report Now', None, report),
     )
 
+    from threading import Event, Thread
+    def call_repeatedly(interval, func, *args):
+        stopped = Event()
+        def loop():
+            while not stopped.wait(interval): # the first call is in `interval` secs
+                func(*args)
+        Thread(target=loop).start()
+        return stopped.set
+
+    def report_dummy():
+        print("Report");
+
     def bye(sysTrayIcon):
-        print(gui_up);
         if not gui_up:
+            timer()
             mmw.destroy();
 
+    timer = call_repeatedly(5, report_dummy)
     systrayicon.SysTrayIcon(next(icons), hover_text, menu_options, on_quit=bye, default_menu_index=1);
     mmw.mainloop();
