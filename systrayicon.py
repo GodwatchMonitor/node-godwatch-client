@@ -57,16 +57,17 @@ class SysTrayIcon(object):
                        win32con.WM_USER+20 : self.notify,}
         # Register the Window class.
         window_class = win32gui.WNDCLASS()
-        hinst = window_class.hInstance = win32gui.GetModuleHandle(None)
+        self.hinst = window_class.hInstance = win32gui.GetModuleHandle(None)
         window_class.lpszClassName = self.window_class_name
         window_class.style = win32con.CS_VREDRAW | win32con.CS_HREDRAW;
         window_class.hCursor = win32gui.LoadCursor(0, win32con.IDC_ARROW)
         window_class.hbrBackground = win32con.COLOR_WINDOW
         window_class.lpfnWndProc = message_map # could also specify a wndproc.
-        classAtom = win32gui.RegisterClass(window_class)
+        self.classAtom = win32gui.RegisterClass(window_class)
+
         # Create the Window.
         style = win32con.WS_OVERLAPPED | win32con.WS_SYSMENU
-        self.hwnd = win32gui.CreateWindow(classAtom,
+        self.hwnd = win32gui.CreateWindow(self.classAtom,
                                           self.window_class_name,
                                           style,
                                           0,
@@ -75,7 +76,7 @@ class SysTrayIcon(object):
                                           win32con.CW_USEDEFAULT,
                                           0,
                                           0,
-                                          hinst,
+                                          self.hinst,
                                           None)
         win32gui.UpdateWindow(self.hwnd)
         self.notify_id = None
@@ -102,10 +103,10 @@ class SysTrayIcon(object):
 
     def refresh_icon(self):
         # Try and find a custom icon
-        hinst = win32gui.GetModuleHandle(None)
+        self.hinst = win32gui.GetModuleHandle(None)
         if os.path.isfile(self.icon):
             icon_flags = win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE
-            hicon = win32gui.LoadImage(hinst,
+            hicon = win32gui.LoadImage(self.hinst,
                                        self.icon,
                                        win32con.IMAGE_ICON,
                                        0,
@@ -209,6 +210,7 @@ class SysTrayIcon(object):
         menu_action = self.menu_actions_by_id[id]
         if menu_action == self.QUIT:
             win32gui.DestroyWindow(self.hwnd)
+            self.classAtom = win32gui.UnregisterClass(self.classAtom, self.hinst)
         else:
             menu_action(self)
 

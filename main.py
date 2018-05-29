@@ -4,7 +4,10 @@ from tkinter import ttk
 import requests, json, socket
 import systrayicon
 
-root = Tk();
+mmw = Tk();
+mmw.withdraw();
+
+root = Toplevel(mmw);
 root.title("node-Godwatch Client")
 root.geometry("320x200");
 root.resizable(0, 0);
@@ -72,75 +75,108 @@ def save_settings():
     settings_file.write(str_server.get() + '\n' + str_username.get() + '\n' + str_password.get() + '\n' + str_cname.get() + '\n');
     settings_file.close();
 
-config_page = Frame(root, width=300, height=110, pady=10);
+def build_gui(root):
+    try:
+        dummy = Frame(root);
+    except:
+        root = Toplevel(mmw);
+        root.title("node-Godwatch Client")
+        root.geometry("320x200");
+        root.resizable(0, 0);
 
-config_page_f1 = Frame(config_page);
-label_server = Label(config_page_f1, text="Server");
-input_server = Entry(config_page_f1, textvariable=str_server);
-input_server.insert(0, "server:port");
-label_server.grid(row=1,column=1);
-input_server.grid(row=1,column=2);
+    config_page = Frame(root, width=300, height=110, pady=10);
 
-label_username = Label(config_page_f1, text="Username");
-input_username = Entry(config_page_f1, textvariable=str_username);
-label_username.grid(row=2,column=1);
-input_username.grid(row=2,column=2);
+    config_page_f1 = Frame(config_page);
+    label_server = Label(config_page_f1, text="Server");
+    input_server = Entry(config_page_f1, textvariable=str_server);
+    input_server.insert(0, "server:port");
+    label_server.grid(row=1,column=1);
+    input_server.grid(row=1,column=2);
 
-label_password = Label(config_page_f1, text="Password");
-input_password = Entry(config_page_f1, textvariable=str_password, show="*");
-label_password.grid(row=3,column=1);
-input_password.grid(row=3,column=2);
-config_page_f1.grid(row=1,column=1,sticky=W);
+    label_username = Label(config_page_f1, text="Username");
+    input_username = Entry(config_page_f1, textvariable=str_username);
+    label_username.grid(row=2,column=1);
+    input_username.grid(row=2,column=2);
 
-config_page_f2 = Frame(config_page, padx=20);
-button_saveSettings = Button(config_page_f2, text="Save Settings", command=save_settings);
-button_saveSettings.grid(row=1,column=1);
-button_retrieveData = Button(config_page_f2, text="Retrieve Settings", command=save_settings);
-button_retrieveData.grid(row=2,column=1);
-config_page_f2.grid(row=1,column=2,sticky=E);
+    label_password = Label(config_page_f1, text="Password");
+    input_password = Entry(config_page_f1, textvariable=str_password, show="*");
+    label_password.grid(row=3,column=1);
+    input_password.grid(row=3,column=2);
+    config_page_f1.grid(row=1,column=1,sticky=W);
 
-config_page.grid(row=1,column=1);
+    config_page_f2 = Frame(config_page, padx=20);
+    button_saveSettings = Button(config_page_f2, text="Save Settings", command=save_settings);
+    button_saveSettings.grid(row=1,column=1);
+    button_retrieveData = Button(config_page_f2, text="Retrieve Settings", command=save_settings);
+    button_retrieveData.grid(row=2,column=1);
+    config_page_f2.grid(row=1,column=2,sticky=E);
 
-settings_page = Frame(root, width=300, height=110, pady=10);
+    config_page.grid(row=1,column=1);
 
-label_cname = Label(settings_page, text="Name: ");
-input_cname = Label(settings_page, textvariable=str_cname);
-label_cname.grid(row=1,column=1,sticky=E);
-input_cname.grid(row=1,column=2,sticky=W);
+    settings_page = Frame(root, width=300, height=110, pady=10);
 
-label_chash = Label(settings_page, text="Hash: ");
-input_chash = Entry(settings_page, textvariable=str_chash, state='readonly', readonlybackground='white', fg='black');
-label_chash.grid(row=2,column=1,sticky=E);
-input_chash.grid(row=2,column=2,sticky=W);
+    label_cname = Label(settings_page, text="Name: ");
+    input_cname = Label(settings_page, textvariable=str_cname);
+    label_cname.grid(row=1,column=1,sticky=E);
+    input_cname.grid(row=1,column=2,sticky=W);
 
-label_cinterval = Label(settings_page, text="Interval: ");
-input_cinterval = Entry(settings_page, textvariable=str_cinterval);
-label_cinterval.grid(row=3,column=1,sticky=E);
-input_cinterval.grid(row=3,column=2,sticky=W);
+    label_chash = Label(settings_page, text="Hash: ");
+    input_chash = Entry(settings_page, textvariable=str_chash, state='readonly', readonlybackground='white', fg='black');
+    label_chash.grid(row=2,column=1,sticky=E);
+    input_chash.grid(row=2,column=2,sticky=W);
 
-button_report = Button(config_page_f2, text="Report Now", command=report);
-button_report.grid(row=4,column=1);
+    label_cinterval = Label(settings_page, text="Interval: ");
+    input_cinterval = Entry(settings_page, textvariable=str_cinterval);
+    label_cinterval.grid(row=3,column=1,sticky=E);
+    input_cinterval.grid(row=3,column=2,sticky=W);
 
-settings_page.grid(row=2,column=1);
+    button_report = Button(config_page_f2, text="Report Now", command=report);
+    button_report.grid(row=4,column=1);
+
+    button_minimize = Button(config_page_f2, text="SysTray", command=lambda arg=root: minimize_to_tray(root));
+    button_minimize.grid(row=5,column=1);
+
+    settings_page.grid(row=2,column=1);
+
+    root.protocol("WM_DELETE_WINDOW", lambda arg=root: minimize_to_tray(root));
+
+    #root.mainloop();
 
 load_settings();
 
 if __name__ == '__main__':
     import itertools, glob
 
+    def quit_app():
+        mmw.destroy();
+
+    gui_up = False;
+
+    def minimize_to_tray(root):
+        global gui_up;
+        gui_up = False;
+        root.destroy();
+        systrayicon.SysTrayIcon(next(icons), hover_text, menu_options, on_quit=bye, default_menu_index=1);
+
+    def maximize_to_gui(sysTrayIcon):
+        global gui_up;
+        print(gui_up);
+        gui_up = True;
+        print(gui_up);
+        sysTrayIcon.execute_menu_option(1025);
+        build_gui(root);
+
     icons = itertools.cycle(glob.glob('*.ico'))
     hover_text = "Godwatch Client"
     menu_options = (
+        ('View GUI', None, maximize_to_gui),
         ('Report Now', None, report),
-        ('A sub-menu', None,
-            (
-                ('Say Hello to Simon', None, report),
-                ('Switch Icon', None, report),
-            )
-        )
     )
-    def bye(sysTrayIcon): print('')
 
-    systrayicon.SysTrayIcon(next(icons), hover_text, menu_options, on_quit=bye, default_menu_index=1)
+    def bye(sysTrayIcon):
+        print(gui_up);
+        if not gui_up:
+            mmw.destroy();
 
-    root.mainloop();
+    systrayicon.SysTrayIcon(next(icons), hover_text, menu_options, on_quit=bye, default_menu_index=1);
+    mmw.mainloop();
