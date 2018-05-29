@@ -53,6 +53,6 @@ def save_settings():
     settings_file.write(str_server.get() + '\n' + str_username.get() + '\n' + str_password.get() + '\n');
     settings_file.close();
 
-
+load_settings();
 
 root.mainloop();
