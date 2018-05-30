@@ -1,2 +1,2 @@
-# node-godwatch-client
+# Godwatch Client
 A reporting client for node-godwatch
