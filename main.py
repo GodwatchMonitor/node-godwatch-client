@@ -3,6 +3,7 @@ from tkinter import *
 from tkinter import ttk
 import requests, json, socket
 import systrayicon
+import datetime
 
 mmw = Tk();
 mmw.withdraw();
@@ -88,19 +89,20 @@ def report_hidden(*args):
     settings = load_settings_hidden();
 
     rc = requests.get('http://' + settings[0][:-1] + '/clients/report/' + hashify(settings[3][:-1]), auth=(settings[1][:-1], settings[2][:-1]));
-    nd = json.loads(rc.text);
+    if rc.status_code == 200:
+        nd = json.loads(rc.text);
 
     rr = requests.put('http://' + settings[0][:-1] + '/clients/report/' + hashify(settings[3][:-1]), auth=(settings[1][:-1], settings[2][:-1]), json={ 'ip': getNetworkIp(), 'interval': nd['interval'] });
-    print(rr.status_code);
-    if rr.status_code == 200:
-        retrieve_settings_hidden(settings);
 
-def retrieve_settings_hidden(settings):
+    if rr.status_code == 200:
+        retrieve_settings_hidden(settings, rc.elapsed.total_seconds(), rr.elapsed.total_seconds());
+
+def retrieve_settings_hidden(settings, time1, time2):
 
     rr = requests.get('http://' + settings[0][:-1] + '/clients/report/' + hashify(settings[3][:-1]), auth=(settings[1][:-1], settings[2][:-1]));
 
     if rr.status_code == 200:
-        save_settings_hidden(settings, json.loads(rr.text));
+        save_settings_hidden(settings, json.loads(rr.text), time1, time2, rr.elapsed.total_seconds());
 
 def load_settings_hidden():
 
@@ -117,11 +119,19 @@ def load_settings_hidden():
 
     settings_file.close();
 
-def save_settings_hidden(settings, data):
+def save_settings_hidden(settings, data, time1, time2, time3):
     settings_file = open('settings.txt', 'w+');
     settings_file.write(settings[0][:-1] + '\n' + settings[1][:-1] + '\n' + settings[2][:-1] + '\n' + settings[3][:-1] + '\n' + str(data['interval']) + '\n');
     settings_file.close();
-    reset_timer(int(data['interval'])/1000);
+
+    nin = int(data['interval'])/1000;
+    nin -= time1;
+    nin -= time2;
+    nin -= time3;
+
+    print(nin);
+
+    reset_timer(nin);
 
 
 # GUI
