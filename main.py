@@ -129,8 +129,6 @@ def save_settings_hidden(settings, data, time1, time2, time3):
     nin -= time2;
     nin -= time3;
 
-    print(nin);
-
     reset_timer(nin);
 
 
@@ -252,7 +250,7 @@ if __name__ == '__main__':
 
     load_settings();
 
-    timer = call_repeatedly(5, report_hidden);
+    timer = call_repeatedly(0.1, report_hidden);
 
     systrayicon.SysTrayIcon(next(icons), hover_text, menu_options, on_quit=bye, default_menu_index=1);
     mmw.mainloop();
