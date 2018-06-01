@@ -22,17 +22,27 @@ def report_hidden(*args):
 
     settings = load_settings_hidden();
 
-    rr = requests.put('http://' + settings[0][:-1] + '/clients/report/' + hashify(settings[3][:-1]), auth=(settings[1][:-1], settings[2][:-1]), json={ 'ip': getNetworkIp() });
+    try:
 
-    if rr.status_code == 200:
-        retrieve_settings_hidden(settings, rr.elapsed.total_seconds());
+        rr = requests.put('http://' + settings[0][:-1] + '/clients/report/' + hashify(settings[3][:-1]), auth=(settings[1][:-1], settings[2][:-1]), json={ 'ip': getNetworkIp() });
+
+        if rr.status_code == 200:
+            retrieve_settings_hidden(settings, rr.elapsed.total_seconds());
+
+    except:
+        print("Error in report_hidden()");
 
 def retrieve_settings_hidden(settings, time1):
 
-    rr = requests.get('http://' + settings[0][:-1] + '/clients/report/' + hashify(settings[3][:-1]), auth=(settings[1][:-1], settings[2][:-1]));
+    try:
 
-    if rr.status_code == 200:
-        save_settings_hidden(settings, json.loads(rr.text), time1, rr.elapsed.total_seconds());
+        rr = requests.get('http://' + settings[0][:-1] + '/clients/report/' + hashify(settings[3][:-1]), auth=(settings[1][:-1], settings[2][:-1]));
+
+        if rr.status_code == 200:
+            save_settings_hidden(settings, json.loads(rr.text), time1, rr.elapsed.total_seconds());
+
+    except:
+        print("Error in retrieve_settings_hidden()");
 
 def load_settings_hidden():
 
