@@ -73,7 +73,7 @@ def save_settings_hidden(settings, data, time1, time2):
 if __name__ == '__main__':
     import itertools, glob
 
-    icons = itertools.cycle(glob.glob('*.ico'))
+    icons = itertools.cycle(glob.glob('ico/*.ico'))
     hover_text = "Godwatch Client"
     menu_options = (
         ('Report Now', None, report_hidden),

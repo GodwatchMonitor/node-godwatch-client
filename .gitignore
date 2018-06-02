@@ -1,6 +1,2 @@
 /settings.txt
-godwatch-client.nsi
-godwatch-client.nsf
-godwatch-client-setup.exe
-InstallOptionsFile.ini
-INetC.dll
+clientinstaller/
