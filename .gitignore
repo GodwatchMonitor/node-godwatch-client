@@ -1,3 +1,7 @@
-/settings.txt
+/settings.cfg
 clientinstaller/
 /__pycache__
+/build
+/dist
+main.spec
+initsettings.txt
