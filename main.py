@@ -2,6 +2,13 @@ import requests, json, socket, os
 import systrayicon
 from simplecrypt import encrypt, decrypt
 
+try:
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+except:
+    os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
+
+appdata = os.getenv('LOCALAPPDATA')+"\\Samusoidal\\Godwatch Client\\";
+
 def hashify(st):
     ns = "";
     i = 0;
@@ -48,10 +55,11 @@ def retrieve_settings_hidden(settings, time1):
 
 def load_settings_hidden():
 
+    print(appdata+'settings.cfg')
     try:
-        settings_file = open('settings.cfg', 'rb+');
+        settings_file = open(appdata+'settings.cfg', 'rb+');
     except IOError:
-        settings_file = open('settings.cfg', 'wb+');
+        settings_file = open(appdata+'settings.cfg', 'wb+');
 
     try:
         settingsdecrypt = str(decrypt('$adClub72!_gq%', settings_file.read()));
@@ -69,7 +77,7 @@ def save_settings_hidden(settings, data, time1, time2):
     nin -= time1;
     nin -= time2;
 
-    settings_file = open('settings.cfg', 'wb+');
+    settings_file = open(appdata+'settings.cfg', 'wb+');
     data = settings[0] + '\r\n' + settings[1] + '\r\n' + settings[2] + '\r\n' + settings[3] + '\r\n' + str(data['interval']) + '\r\n'
     settings_file.write(encrypt('$adClub72!_gq%', bytes(data, 'utf8')));
     settings_file.close();
@@ -77,15 +85,15 @@ def save_settings_hidden(settings, data, time1, time2):
     reset_timer(nin);
 
 def encrypt_settings(): # Reads and writes in bytes
-    isettings_file = open('initsettings.txt', 'rb');
+    isettings_file = open(appdata+'initsettings.txt', 'rb');
     settings = isettings_file.read();
     isettings_file.close();
 
-    settings_file = open('settings.cfg', 'wb+');
+    settings_file = open(appdata+'settings.cfg', 'wb+');
     settings_file.write(encrypt('$adClub72!_gq%',settings));
     settings_file.close();
 
-    os.remove("initsettings.txt");
+    os.remove(appdata+"initsettings.txt");
 
 if __name__ == '__main__':
     import itertools, glob
@@ -122,7 +130,7 @@ if __name__ == '__main__':
         encrypt_settings();
 
     from pathlib import Path
-    if Path("initsettings.txt").is_file():
+    if Path(appdata+"initsettings.txt").is_file():
         init_settings();
 
     timer = call_repeatedly(5, report_hidden);
