@@ -2,10 +2,7 @@ import requests, json, socket, os
 import systrayicon
 from simplecrypt import encrypt, decrypt
 
-try:
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-except:
-    os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 appdata = os.getenv('LOCALAPPDATA')+"\\Samusoidal\\Godwatch Client\\";
 
@@ -98,7 +95,8 @@ def encrypt_settings(): # Reads and writes in bytes
 if __name__ == '__main__':
     import itertools, glob
 
-    icons = itertools.cycle(glob.glob('ico/*.ico'))
+    icons = glob.glob('ico/*.ico')
+    print(icons[0]);
     hover_text = "Godwatch Client"
     menu_options = (
         ('Report Now', None, report_hidden),
@@ -135,4 +133,4 @@ if __name__ == '__main__':
 
     timer = call_repeatedly(5, report_hidden);
 
-    systrayicon.SysTrayIcon(next(icons), hover_text, menu_options, on_quit=bye, default_menu_index=1);
+    systrayicon.SysTrayIcon(icons[0], hover_text, menu_options, on_quit=bye, default_menu_index=1);

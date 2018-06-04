@@ -224,22 +224,3 @@ def non_string_iterable(obj):
 
 # Minimal self test. You'll need a bunch of ICO files in the current working
 # directory in order for this to work...
-if __name__ == '__main__':
-    import itertools, glob
-
-    icons = itertools.cycle(glob.glob('*.ico'))
-    hover_text = "SysTrayIcon.py Demo"
-    def hello(sysTrayIcon): print("Hello World.")
-    def simon(sysTrayIcon): print("Hello Simon.")
-    def switch_icon(sysTrayIcon):
-        sysTrayIcon.icon = next(icons)
-        sysTrayIcon.refresh_icon()
-    menu_options = (('Say Hello', next(icons), hello),
-                    ('Switch Icon', None, switch_icon),
-                    ('A sub-menu', next(icons), (('Say Hello to Simon', next(icons), simon),
-                                                  ('Switch Icon', next(icons), switch_icon),
-                                                 ))
-                   )
-    def bye(sysTrayIcon): print('Bye, then.')
-
-    SysTrayIcon(next(icons), hover_text, menu_options, on_quit=bye, default_menu_index=1)
