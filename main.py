@@ -1,4 +1,4 @@
-import requests, json, socket, os
+import requests, json, socket, os, sys
 import systrayicon
 from simplecrypt import encrypt, decrypt
 
@@ -25,30 +25,32 @@ def getNetworkIp():
 # HIDDEN
 def report_hidden(*args):
 
+    start_time = timeit.default_timer();
+
     settings = load_settings_hidden();
 
-    #try:
+    try:
 
-    rr = requests.put('http://' + settings[0] + '/clients/report/' + hashify(settings[3]), auth=(settings[1], settings[2]), json={ 'ip': getNetworkIp() });
+        rr = requests.put('http://' + settings[0] + '/clients/report/' + hashify(settings[3]), auth=(settings[1], settings[2]), json={ 'ip': getNetworkIp() });
 
-    if rr.status_code == 200:
-        retrieve_settings_hidden(settings, rr.elapsed.total_seconds());
+        if rr.status_code == 200:
+            retrieve_settings_hidden(settings, start_time);
 
-    #except:
-    #    print("Error in report_hidden()");
+    except:
+        print("Error in report_hidden()");
 
-def retrieve_settings_hidden(settings, time1):
+def retrieve_settings_hidden(settings, start_time):
 
-    #try:
+    try:
 
-    rr = requests.get('http://' + settings[0] + '/clients/report/' + hashify(settings[3]), auth=(settings[1], settings[2]));
+        rr = requests.get('http://' + settings[0] + '/clients/report/' + hashify(settings[3]), auth=(settings[1], settings[2]));
 
-    if rr.status_code == 200:
-        print(json.loads(rr.text)['interval'])
-        save_settings_hidden(settings, json.loads(rr.text), time1, rr.elapsed.total_seconds());
+        if rr.status_code == 200:
+            print(json.loads(rr.text)['interval'])
+            save_settings_hidden(settings, json.loads(rr.text), start_time);
 
-    #except:
-    #    print("Error in retrieve_settings_hidden()");
+    except:
+        print("Error in retrieve_settings_hidden()");
 
 def load_settings_hidden():
 
@@ -69,15 +71,26 @@ def load_settings_hidden():
 
     settings_file.close();
 
-def save_settings_hidden(settings, data, time1, time2):
+def save_settings_hidden(settings, data, start_time):
     nin = int(data['interval'])/1000;
-    nin -= time1;
-    nin -= time2;
 
-    settings_file = open(appdata+'settings.cfg', 'wb+');
-    data = settings[0] + '\r\n' + settings[1] + '\r\n' + settings[2] + '\r\n' + settings[3] + '\r\n' + str(data['interval']) + '\r\n'
-    settings_file.write(encrypt('$adClub72!_gq%', bytes(data, 'utf8')));
-    settings_file.close();
+    copyfile(appdata+'settings.cfg',appdata+'settings.cfg.bak');
+
+    try:
+
+        settings_file = open(appdata+'settings.cfg', 'wb+');
+        data = settings[0] + '\r\n' + settings[1] + '\r\n' + settings[2] + '\r\n' + settings[3] + '\r\n' + str(data['interval']) + '\r\n'
+        settings_file.write(encrypt('$adClub72!_gq%', bytes(data, 'utf8')));
+        settings_file.close();
+
+        os.remove(appdata+'settings.cfg.bak');
+
+    except:
+        copyfile(appdata+'settings.cfg.bak',appdata+'settings.cfg');
+        os.remove(appdata+'settings.cfg.bak');
+
+    nin -= (timeit.default_timer() - start_time);
+    print(nin);
 
     reset_timer(nin);
 
@@ -94,6 +107,9 @@ def encrypt_settings(): # Reads and writes in bytes
 
 if __name__ == '__main__':
     import itertools, glob
+    from threading import Event, Thread, Timer
+    import timeit
+    from shutil import copyfile
 
     icons = glob.glob('ico/*.ico')
     print(icons[0]);
@@ -107,22 +123,16 @@ if __name__ == '__main__':
         sysicon.icon = icon;
         sysicon.refresh_icon();
 
-    from threading import Event, Thread
-    def call_repeatedly(interval, func, *args):
-        stopped = Event()
-        def loop():
-            while not stopped.wait(interval): # the first call is in `interval` secs
-                func(*args)
-        Thread(target=loop).start()
-        return stopped.set
-
     def reset_timer(newdelay):
+        st = timeit.default_timer();
         global timer
-        timer()
-        timer = call_repeatedly(newdelay, report_hidden);
+        timer.cancel();
+        timer = Timer(newdelay, report_hidden);
+        timer.start();
+        print(timeit.default_timer()-st)
 
     def bye(sysTrayIcon):
-        timer()
+        timer.cancel();
 
     def init_settings():
         encrypt_settings();
@@ -131,6 +141,21 @@ if __name__ == '__main__':
     if Path(appdata+"initsettings.txt").is_file():
         init_settings();
 
-    timer = call_repeatedly(5, report_hidden);
+    timer = Timer(5, report_hidden);
+    timer.start();
+
+    import ctypes
+    try:
+        admin_priv = os.getuid() == 0;
+    except:
+        admin_priv = ctypes.windll.shell32.IsUserAnAdmin() != 0;
+
+    if not admin_priv:
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, "", None, 1)
+
+    if admin_priv:
+        sf = open("d.txt", "w+");
+        sf.write(str(admin_priv));
+        sf.close();
 
     systrayicon.SysTrayIcon(icons[0], hover_text, menu_options, on_quit=bye, default_menu_index=1);
