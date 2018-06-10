@@ -1,3 +1,12 @@
+def log(mess):
+    log = open(appdata+'logfile.log','a+');
+    log.write(str(datetime.datetime.now()) + ":  " + mess+"\n");
+    log.close();
+
+def spit(mess):
+    print(mess);
+    log(mess);
+
 def hashify(st):
     ns = "";
     i = 0;
@@ -129,7 +138,7 @@ def load_settings_hidden():
         settings[0] = settings[0][2:]
         return settings
     except:
-        print("Invalid, missing, or corrupted settings file, ignoring...");
+        spit("Invalid, missing, or corrupted settings file, ignoring...");
 
     settings_file.close();
 
@@ -145,7 +154,7 @@ def encrypt_settings(): # Reads and writes in bytes
     os.remove(appdata+"initsettings.txt");
 
 if __name__ == '__main__':
-    import itertools, glob, timeit, requests, json, socket, os, sys, traceback
+    import itertools, glob, timeit, requests, json, socket, os, sys, traceback, datetime
     from threading import Event, Thread, Timer
     from shutil import copyfile
     import systrayicon
@@ -156,6 +165,11 @@ if __name__ == '__main__':
     appdata = os.getenv('LOCALAPPDATA')+"\\Samusoidal\\Godwatch Client\\";
 
     version = 0.1;
+
+    spit('Started Godwatch Client');
+    spit('Set working directory, appdata, and version.');
+    spit('Version: ' + str(version));
+    spit('appdata: ' + appdata);
 
     icons = glob.glob('ico/*.ico')
     hover_text = "Godwatch Client"
@@ -172,6 +186,7 @@ if __name__ == '__main__':
         global timer
         timer.cancel();
         nin = interval-(timeit.default_timer() - start_time)
+        spit('Resetting timer to ' + str(nin));
         timer = Timer(max(1, min(nin, interval)), report_and_retrieve);
         timer.start();
 
@@ -179,28 +194,38 @@ if __name__ == '__main__':
         timer.cancel();
 
     def init_settings():
+        spit('Encrypting initial settings file.');
         encrypt_settings();
 
     from pathlib import Path
     if Path(appdata+"initsettings.txt").is_file():
         init_settings();
 
+    spit('Removing previous versions...');
     if Path(sys.argv[0]+'.bak').is_file():
         os.remove(sys.argv[0]+'.bak');
+        spit('Removed previous version');
+    else:
+        spit('No previous versions found');
 
+    spit('Initialize timer...');
     timer = Timer(2, report_and_retrieve);
     timer.start()
+    spit('Done.');
 
     import ctypes
+    spit('Check administrator privileges.');
     try:
         admin_priv = os.getuid() == 0;
     except:
         admin_priv = ctypes.windll.shell32.IsUserAnAdmin() != 0;
     if not admin_priv:
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, "", None, 1)
-
+        spit('Either I have been denied necessary sustenance or my heir apparent has inherited them. Either way, I shall die now.');
         # POST-prompt
         os._exit(0);
+    else:
+        spit('Already had admin priveleges. It seems I have more power than I thought.');
 
-
+    spit('Initialize the snazzy system tray icon...');
     systrayicon.SysTrayIcon(icons[0], hover_text, menu_options, on_quit=bye, default_menu_index=1);
