@@ -57,7 +57,7 @@ def report_and_retrieve(*args):
 
                 save = save_settings_hidden(settings, json.loads(retrieve.text)['interval']);
 
-                if json.loads(retrieve.text)['version'] > version:
+                if json.loads(retrieve.text)['version'] != version:
 
                     update = get_new_version(settings);
 
