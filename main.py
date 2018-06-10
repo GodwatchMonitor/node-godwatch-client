@@ -1,11 +1,3 @@
-import requests, json, socket, os, sys
-import systrayicon
-from simplecrypt import encrypt, decrypt
-
-os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
-
-appdata = os.getenv('LOCALAPPDATA')+"\\Samusoidal\\Godwatch Client\\";
-
 def hashify(st):
     ns = "";
     i = 0;
@@ -22,39 +14,110 @@ def getNetworkIp():
     s.connect(('<broadcast>', 0))
     return s.getsockname()[0]
 
-# HIDDEN
-def report_hidden(*args):
+def get_new_version(settings):
+
+    try:
+
+        newver = requests.get('http://' + settings[0] + '/clients/executable', auth=(settings[1], settings[2]), stream=True);
+        with open('newver.exe', 'wb+') as f:
+            f.write(newver.content);
+
+        fn = sys.argv[0];
+        os.rename(fn, fn+'.bak');
+        os.rename('newver.exe', fn);
+
+        os.startfile(fn);
+
+        os._exit(0);
+
+        return True
+
+    except Exception:
+
+        traceback.print_exc()
+
+        return False
+
+
+def report_and_retrieve(*args):
 
     start_time = timeit.default_timer();
 
-    settings = load_settings_hidden();
+    try:
+
+        settings = load_settings_hidden();
+
+        report = report_hidden(settings);
+
+        if report.status_code == 200:
+
+            retrieve = retrieve_settings_hidden(settings);
+
+            if retrieve.status_code == 200:
+
+                save = save_settings_hidden(settings, json.loads(retrieve.text)['interval']);
+
+                if json.loads(retrieve.text)['version'] > version:
+
+                    update = get_new_version(settings);
+
+                    if update:
+                        reset_timer(start_time, int(save)/1000);
+
+                    else:
+                        reset_timer(start_time, int(save)/1000);
+
+                else:
+                    reset_timer(start_time, int(save)/1000);
+
+            else:
+
+                reset_timer(start_time, int(settings[4])/1000);
+
+        else:
+
+            reset_timer(start_time, int(settings[4])/1000);
+
+    except: # This is blocking sys.exit and any exceptions!!!
+
+        reset_timer(start_time, int(settings[4])/1000);
+
+def report_hidden(settings):
+
+    rr = requests.put('http://' + settings[0] + '/clients/report/' + hashify(settings[3]), auth=(settings[1], settings[2]), json={ 'ip': getNetworkIp(), 'version': version });
+
+    return rr;
+
+def retrieve_settings_hidden(settings):
+
+    rr = requests.get('http://' + settings[0] + '/clients/report/' + hashify(settings[3]), auth=(settings[1], settings[2]));
+
+    return rr;
+
+def save_settings_hidden(settings, interval):
+
+    copyfile(appdata+'settings.cfg',appdata+'settings.cfg.bak');
 
     try:
 
-        rr = requests.put('http://' + settings[0] + '/clients/report/' + hashify(settings[3]), auth=(settings[1], settings[2]), json={ 'ip': getNetworkIp() });
+        settings_file = open(appdata+'settings.cfg', 'wb+');
+        data = settings[0] + '\r\n' + settings[1] + '\r\n' + settings[2] + '\r\n' + settings[3] + '\r\n' + str(interval) + '\r\n'
+        settings_file.write(encrypt('$adClub72!_gq%', bytes(data, 'utf8')));
+        settings_file.close();
 
-        if rr.status_code == 200:
-            retrieve_settings_hidden(settings, start_time);
+        os.remove(appdata+'settings.cfg.bak');
 
-    except:
-        print("Error in report_hidden()");
-
-def retrieve_settings_hidden(settings, start_time):
-
-    try:
-
-        rr = requests.get('http://' + settings[0] + '/clients/report/' + hashify(settings[3]), auth=(settings[1], settings[2]));
-
-        if rr.status_code == 200:
-            print(json.loads(rr.text)['interval'])
-            save_settings_hidden(settings, json.loads(rr.text), start_time);
+        return interval;
 
     except:
-        print("Error in retrieve_settings_hidden()");
+
+        copyfile(appdata+'settings.cfg.bak',appdata+'settings.cfg');
+        os.remove(appdata+'settings.cfg.bak');
+
+        return settings[4];
 
 def load_settings_hidden():
 
-    print(appdata+'settings.cfg')
     try:
         settings_file = open(appdata+'settings.cfg', 'rb+');
     except IOError:
@@ -63,36 +126,12 @@ def load_settings_hidden():
     try:
         settingsdecrypt = str(decrypt('$adClub72!_gq%', settings_file.read()));
         settings = settingsdecrypt.split('\\r\\n');
-        print(settings);
         settings[0] = settings[0][2:]
         return settings
     except:
         print("Invalid, missing, or corrupted settings file, ignoring...");
 
     settings_file.close();
-
-def save_settings_hidden(settings, data, start_time):
-    nin = int(data['interval'])/1000;
-
-    copyfile(appdata+'settings.cfg',appdata+'settings.cfg.bak');
-
-    try:
-
-        settings_file = open(appdata+'settings.cfg', 'wb+');
-        data = settings[0] + '\r\n' + settings[1] + '\r\n' + settings[2] + '\r\n' + settings[3] + '\r\n' + str(data['interval']) + '\r\n'
-        settings_file.write(encrypt('$adClub72!_gq%', bytes(data, 'utf8')));
-        settings_file.close();
-
-        os.remove(appdata+'settings.cfg.bak');
-
-    except:
-        copyfile(appdata+'settings.cfg.bak',appdata+'settings.cfg');
-        os.remove(appdata+'settings.cfg.bak');
-
-    nin -= (timeit.default_timer() - start_time);
-    print(nin);
-
-    reset_timer(nin);
 
 def encrypt_settings(): # Reads and writes in bytes
     isettings_file = open(appdata+'initsettings.txt', 'rb');
@@ -106,16 +145,22 @@ def encrypt_settings(): # Reads and writes in bytes
     os.remove(appdata+"initsettings.txt");
 
 if __name__ == '__main__':
-    import itertools, glob
+    import itertools, glob, timeit, requests, json, socket, os, sys, traceback
     from threading import Event, Thread, Timer
-    import timeit
     from shutil import copyfile
+    import systrayicon
+    from simplecrypt import encrypt, decrypt
+
+    os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
+
+    appdata = os.getenv('LOCALAPPDATA')+"\\Samusoidal\\Godwatch Client\\";
+
+    version = 0.1;
 
     icons = glob.glob('ico/*.ico')
-    print(icons[0]);
     hover_text = "Godwatch Client"
     menu_options = (
-        ('Report Now', None, report_hidden),
+        ('Report Now', None, report_and_retrieve),
     )
 
     def switch_icon(icon):
@@ -123,13 +168,12 @@ if __name__ == '__main__':
         sysicon.icon = icon;
         sysicon.refresh_icon();
 
-    def reset_timer(newdelay):
-        st = timeit.default_timer();
+    def reset_timer(start_time, interval):
         global timer
         timer.cancel();
-        timer = Timer(newdelay, report_hidden);
+        nin = interval-(timeit.default_timer() - start_time)
+        timer = Timer(max(1, min(nin, interval)), report_and_retrieve);
         timer.start();
-        print(timeit.default_timer()-st)
 
     def bye(sysTrayIcon):
         timer.cancel();
@@ -141,21 +185,22 @@ if __name__ == '__main__':
     if Path(appdata+"initsettings.txt").is_file():
         init_settings();
 
-    timer = Timer(5, report_hidden);
-    timer.start();
+    if Path(sys.argv[0]+'.bak').is_file():
+        os.remove(sys.argv[0]+'.bak');
+
+    timer = Timer(2, report_and_retrieve);
+    timer.start()
 
     import ctypes
     try:
         admin_priv = os.getuid() == 0;
     except:
         admin_priv = ctypes.windll.shell32.IsUserAnAdmin() != 0;
-
     if not admin_priv:
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, "", None, 1)
 
-    if admin_priv:
-        sf = open("d.txt", "w+");
-        sf.write(str(admin_priv));
-        sf.close();
+        # POST-prompt
+        os._exit(0);
+
 
     systrayicon.SysTrayIcon(icons[0], hover_text, menu_options, on_quit=bye, default_menu_index=1);
