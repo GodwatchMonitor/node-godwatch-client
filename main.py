@@ -7,14 +7,6 @@ def spit(mess):
     print(mess);
     log(mess);
 
-def hashify(st):
-    ns = "";
-    i = 0;
-    for l in st:
-        ns += chr(ord(l)*(i+1));
-        i += 1;
-    return ns;
-
 # METHODS
 
 def getNetworkIp():
@@ -93,13 +85,13 @@ def report_and_retrieve(*args):
 
 def report_hidden(settings):
 
-    rr = requests.put('http://' + settings[0] + '/clients/report/' + hashify(settings[3]), auth=(settings[1], settings[2]), json={ 'ip': getNetworkIp(), 'version': version });
+    rr = requests.put('http://' + settings[0] + '/clients/report/' + settings[3], auth=(settings[1], settings[2]), json={ 'ip': getNetworkIp(), 'version': version });
 
     return rr;
 
 def retrieve_settings_hidden(settings):
 
-    rr = requests.get('http://' + settings[0] + '/clients/report/' + hashify(settings[3]), auth=(settings[1], settings[2]));
+    rr = requests.get('http://' + settings[0] + '/clients/report/' + (settings[3], auth=(settings[1], settings[2]));
 
     return rr;
 
