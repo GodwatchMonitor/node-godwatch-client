@@ -5,3 +5,4 @@ clientinstaller/
 /dist
 main.spec
 initsettings.txt
+build.bat

@@ -91,7 +91,7 @@ def report_hidden(settings):
 
 def retrieve_settings_hidden(settings):
 
-    rr = requests.get('http://' + settings[0] + '/clients/report/' + (settings[3], auth=(settings[1], settings[2]));
+    rr = requests.get('http://' + settings[0] + '/clients/report/' + settings[3], auth=(settings[1], settings[2]));
 
     return rr;
 
