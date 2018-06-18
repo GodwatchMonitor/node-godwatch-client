@@ -6,3 +6,4 @@ clientinstaller/
 main.spec
 initsettings.txt
 build.bat
+builddebug.bat

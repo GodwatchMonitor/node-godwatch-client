@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
     appdata = os.getenv('LOCALAPPDATA')+"\\Samusoidal\\Godwatch Client\\";
 
-    version = 0.1;
+    version = 0.2;
 
     spit('Started Godwatch Client');
     spit('Set working directory, appdata, and version.');
@@ -177,10 +177,9 @@ if __name__ == '__main__':
     def reset_timer(start_time, interval):
         global timer
         timer.cancel();
-        nin = interval-(timeit.default_timer() - start_time)
-        spit('Resetting timer to ' + str(nin));
-        timer = Timer(max(1, min(nin, interval)), report_and_retrieve);
+        timer = Timer(abs(interval-(timeit.default_timer() - start_time)), report_and_retrieve);
         timer.start();
+        print(timeit.default_timer())
 
     def bye(sysTrayIcon):
         timer.cancel();
