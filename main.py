@@ -1,222 +1,286 @@
-def log(mess):
-    log = open(appdata+'logfile.log','a+');
-    log.write(str(datetime.datetime.now()) + ":  " + mess+"\n");
-    log.close();
+import itertools, glob, timeit, requests, json, socket, os, sys, traceback, datetime
+from threading import Event, Thread, Timer
+from shutil import copyfile
+from simplecrypt import encrypt, decrypt
+import win32serviceutil, win32service, win32event, servicemanager
+from pathlib import Path
 
-def spit(mess):
-    print(mess);
-    log(mess);
+class GodwatchService(win32serviceutil.ServiceFramework):
+    _svc_name_ = "GodwatchClient"
+    _svc_display_name_ = "Godwatch Client Service"
+    _svc_description_ = "Service for Godwatch Monitor Client"
 
-# METHODS
+    def __init__(self,args):
+        win32serviceutil.ServiceFramework.__init__(self,args);
+        self.hWaitStop = win32event.CreateEvent(None,0,0,None);
+        socket.setdefaulttimeout(60);
 
-def getNetworkIp():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    s.connect(('<broadcast>', 0))
-    return s.getsockname()[0]
+    def SvcStop(self):
+        self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
+        win32event.SetEvent(self.hWaitStop);
+        self.application.cancelled = True
 
-def get_new_version(settings):
+    def SvcDoRun(self):
+        self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
+        servicemanager.LogMsg(servicemanager.EVENTLOG_INFORMATION_TYPE, servicemanager.PYS_SERVICE_STARTED, (self._svc_name_,''))
+        self.started = False;
+        self.ReportServiceStatus(win32service.SERVICE_RUNNING)
+        rc = None;
 
-    try:
+        while rc != win32event.WAIT_OBJECT_0:
 
-        newver = requests.get('http://' + settings[0] + '/clients/executable', auth=(settings[1], settings[2]), stream=True);
-        with open('newver.exe', 'wb+') as f:
-            f.write(newver.content);
+            if not self.started:
+                self.application = GodwatchApp(None);
+                self.started = True;
 
-        fn = sys.argv[0];
-        os.rename(fn, fn+'.bak');
-        os.rename('newver.exe', fn);
+            rc = win32event.WaitForSingleObject(self.hWaitStop, 1000)
 
-        os.startfile(fn);
+    def templog(self, mess):
+        log = open('C:\\temp\\gwlogfile.log','a+');
+        log.write(str(datetime.datetime.now()) + ":  " + mess+"\n");
+        log.close();
 
-        os._exit(0);
+    def spit(self, mess):
+        #print(mess);
+        #servicemanager.LogMsg(servicemanager.EVENTLOG_INFORMATION_TYPE, servicemanager.PYS_SERVICE_STARTED, (self._svc_name_,'mess'))
+        #self.templog(mess);
+        pass;
 
-        return True
+class GodwatchApp(Thread):
 
-    except Exception:
+    def __init__(self,args):
 
-        traceback.print_exc()
+        Thread.__init__(self);
+        self.cancelled = False;
+        self.main()
 
-        return False
+    def log(self, mess):
+        log = open(self.appdata+'logfile.log','a+');
+        log.write(str(datetime.datetime.now()) + ":  " + mess+"\n");
+        log.close();
 
+    def templog(self, mess):
+        log = open('C:\\temp\\gwlogfile.log','a+');
+        log.write(str(datetime.datetime.now()) + ":  " + mess+"\n");
+        log.close();
 
-def report_and_retrieve(*args):
+    def spit(self, mess):
+        #print(mess);
+        #servicemanager.LogMsg(servicemanager.EVENTLOG_INFORMATION_TYPE, servicemanager.PYS_SERVICE_STARTED, (self._svc_name_,''))
+        #self.log(mess);
+        self.log(mess);
+        pass;
 
-    start_time = timeit.default_timer();
+    # METHODS
+    def getNetworkIp(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        s.connect(('<broadcast>', 0))
+        return s.getsockname()[0]
 
-    try:
+    def get_new_version(self, settings):
 
-        settings = load_settings_hidden();
+        try:
 
-        report = report_hidden(settings);
+            newver = requests.get('http://' + settings[0] + '/clients/executable', auth=(settings[1], settings[2]), stream=True);
+            with open('newver.exe', 'wb+') as f:
+                f.write(newver.content);
 
-        if report.status_code == 200:
+            fn = sys.argv[0];
+            os.rename(fn, fn+'.bak');
+            os.rename('newver.exe', fn);
 
-            retrieve = retrieve_settings_hidden(settings);
+            os.startfile(fn);
 
-            if retrieve.status_code == 200:
+            os._exit(0);
 
-                save = save_settings_hidden(settings, json.loads(retrieve.text)['interval']);
+            return True
 
-                if json.loads(retrieve.text)['version'] != version:
+        except Exception:
 
-                    update = get_new_version(settings);
+            #traceback.print_exc()
 
-                    if update:
-                        reset_timer(start_time, int(save)/1000);
+            return False
+
+    def report_and_retrieve(self):
+
+        self.spit("Beginning report...");
+
+        start_time = timeit.default_timer();
+
+        try:
+
+            #self.spit("Loading Settings...");
+            #settings = self.load_settings_hidden(); # THIS IS THE TIMING PROBLEM!!!!!!!!!!!!!!!!!!!!
+
+            self.spit("Reporting...");
+            report = self.report_hidden(self.settings);
+
+            if report.status_code == 200:
+                self.spit("OK");
+
+                self.spit("Retrieving...");
+                retrieve = self.retrieve_settings_hidden(self.settings);
+
+                if retrieve.status_code == 200:
+                    self.spit("OK");
+
+                    self.spit("Saving...");
+                    save = self.save_settings_hidden(self.settings, json.loads(retrieve.text)['interval']);
+                    self.spit("OK");
+
+                    if json.loads(retrieve.text)['version'] != self.version:
+
+                        self.spit("New version available, installing...")
+                        update = self.get_new_version(self.settings);
+
+                        if update:
+                            self.spit("OK");
+                            self.reset_timer(start_time, int(save)/1000);
+
+                        else:
+                            self.spit("Update failed, please update manually.")
+                            self.reset_timer(start_time, int(save)/1000);
 
                     else:
-                        reset_timer(start_time, int(save)/1000);
+                        self.reset_timer(start_time, int(save)/1000);
 
                 else:
-                    reset_timer(start_time, int(save)/1000);
+                    self.reset_timer(start_time, int(self.settings[4])/1000);
 
             else:
+                self.reset_timer(start_time, int(self.settings[4])/1000);
 
-                reset_timer(start_time, int(settings[4])/1000);
+        except: # This is blocking sys.exit and any exceptions!!!
+            self.spit(traceback.format_exc());
+            self.reset_timer(start_time, int(self.settings[4])/1000);
 
-        else:
+        self.spit("Done");
 
-            reset_timer(start_time, int(settings[4])/1000);
+    def report_hidden(self, settings):
 
-    except: # This is blocking sys.exit and any exceptions!!!
+        rr = requests.put('http://' + settings[0] + '/clients/report/' + settings[3], auth=(settings[1], settings[2]), json={ 'ip': self.getNetworkIp(), 'version': self.version });
 
-        reset_timer(start_time, int(settings[4])/1000);
+        return rr;
 
-def report_hidden(settings):
+    def retrieve_settings_hidden(self, settings):
 
-    rr = requests.put('http://' + settings[0] + '/clients/report/' + settings[3], auth=(settings[1], settings[2]), json={ 'ip': getNetworkIp(), 'version': version });
+        rr = requests.get('http://' + settings[0] + '/clients/report/' + settings[3], auth=(settings[1], settings[2]));
+        self.spit("Retrieve: " + str(rr.status_code))
+        return rr;
 
-    return rr;
+    def save_settings_hidden(self, settings, interval):
 
-def retrieve_settings_hidden(settings):
+        copyfile(self.appdata+'settings.cfg',self.appdata+'settings.cfg.bak');
 
-    rr = requests.get('http://' + settings[0] + '/clients/report/' + settings[3], auth=(settings[1], settings[2]));
+        try:
 
-    return rr;
+            settings_file = open(self.appdata+'settings.cfg', 'wb+');
+            data = settings[0] + '\r\n' + settings[1] + '\r\n' + settings[2] + '\r\n' + settings[3] + '\r\n' + str(interval) + '\r\n'
+            settings_file.write(encrypt('$adClub72!_gq%', bytes(data, 'utf8')));
+            settings_file.close();
 
-def save_settings_hidden(settings, interval):
+            os.remove(self.appdata+'settings.cfg.bak');
 
-    copyfile(appdata+'settings.cfg',appdata+'settings.cfg.bak');
+            return interval;
 
-    try:
+        except:
 
-        settings_file = open(appdata+'settings.cfg', 'wb+');
-        data = settings[0] + '\r\n' + settings[1] + '\r\n' + settings[2] + '\r\n' + settings[3] + '\r\n' + str(interval) + '\r\n'
-        settings_file.write(encrypt('$adClub72!_gq%', bytes(data, 'utf8')));
+            copyfile(self.appdata+'settings.cfg.bak',self.appdata+'settings.cfg');
+            os.remove(self.appdata+'settings.cfg.bak');
+
+            return settings[4];
+
+    def load_settings_hidden(self):
+
+        try:
+            settings_file = open(self.appdata+'settings.cfg', 'rb+');
+        except IOError:
+            settings_file = open(self.appdata+'settings.cfg', 'wb+');
+
+        try:
+            settingsdecrypt = str(decrypt('$adClub72!_gq%', settings_file.read()));
+            settings = settingsdecrypt.split('\\r\\n');
+            settings[0] = settings[0][2:]
+            return settings
+        except:
+            self.spit("Invalid, missing, or corrupted settings file, ignoring...");
+            blank = []
+            return blank
+
         settings_file.close();
 
-        os.remove(appdata+'settings.cfg.bak');
+    def encrypt_settings(self): # Reads and writes in bytes
+        isettings_file = open(self.appdata+'initsettings.txt', 'rb');
+        settings = isettings_file.read();
+        isettings_file.close();
 
-        return interval;
+        settings_file = open(self.appdata+'settings.cfg', 'wb+');
+        settings_file.write(encrypt('$adClub72!_gq%',settings));
+        settings_file.close();
 
-    except:
+        os.remove(self.appdata+"initsettings.txt");
 
-        copyfile(appdata+'settings.cfg.bak',appdata+'settings.cfg');
-        os.remove(appdata+'settings.cfg.bak');
+    def reset_timer(self, start_time, interval):
+        if self.cancelled:
+            os._exit(0);
+        else:
+            self.timer.cancel();
+            self.timer = Timer(abs(interval-(timeit.default_timer() - start_time)), self.report_and_retrieve);
+            self.timer.start();
 
-        return settings[4];
+    def init_settings(self):
+        self.spit('Encrypting initial settings file.');
+        self.encrypt_settings();
 
-def load_settings_hidden():
+    def main(self):
 
-    try:
-        settings_file = open(appdata+'settings.cfg', 'rb+');
-    except IOError:
-        settings_file = open(appdata+'settings.cfg', 'wb+');
+        os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
-    try:
-        settingsdecrypt = str(decrypt('$adClub72!_gq%', settings_file.read()));
-        settings = settingsdecrypt.split('\\r\\n');
-        settings[0] = settings[0][2:]
-        return settings
-    except:
-        spit("Invalid, missing, or corrupted settings file, ignoring...");
+        self.appdata = os.path.dirname(os.path.abspath(sys.argv[0]))+"\\"
 
-    settings_file.close();
+        self.version = 0.3
 
-def encrypt_settings(): # Reads and writes in bytes
-    isettings_file = open(appdata+'initsettings.txt', 'rb');
-    settings = isettings_file.read();
-    isettings_file.close();
+        self.spit('Started Godwatch Client');
+        self.spit('Set working directory, appdata, and version.')
+        self.spit('Version: ' + str(self.version));
+        self.spit('appdata: ' + self.appdata);
 
-    settings_file = open(appdata+'settings.cfg', 'wb+');
-    settings_file.write(encrypt('$adClub72!_gq%',settings));
-    settings_file.close();
+        if Path(self.appdata+"initsettings.txt").is_file():
+            self.init_settings();
 
-    os.remove(appdata+"initsettings.txt");
+        self.settings = self.load_settings_hidden()
+
+        self.spit('Removing previous versions...');
+        if Path(sys.argv[0]+'.bak').is_file():
+            os.remove(sys.argv[0]+'.bak');
+            self.spit('Removed previous version');
+        else:
+            self.spit('No previous versions found');
+
+        self.spit('Initialize timer...');
+        self.timer = Timer(2, self.report_and_retrieve);
+        self.timer.start()
+        self.spit('Done.');
+
+        import ctypes
+        self.spit('Check administrator privileges.');
+        try:
+            admin_priv = os.getuid() == 0;
+        except:
+            admin_priv = ctypes.windll.shell32.IsUserAnAdmin() != 0;
+        if not admin_priv:
+            ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, "", None, 1)
+            self.spit('Either I have been denied necessary sustenance or my heir apparent has inherited them. Either way, I shall die now.');
+            # POST-prompt
+            os._exit(0);
+        else:
+            self.spit('Already had admin priveleges. It seems I have more power than I thought.');
 
 if __name__ == '__main__':
-    import itertools, glob, timeit, requests, json, socket, os, sys, traceback, datetime
-    from threading import Event, Thread, Timer
-    from shutil import copyfile
-    import systrayicon
-    from simplecrypt import encrypt, decrypt
-
-    os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
-
-    appdata = os.getenv('LOCALAPPDATA')+"\\Samusoidal\\Godwatch Client\\";
-
-    version = 0.2;
-
-    spit('Started Godwatch Client');
-    spit('Set working directory, appdata, and version.');
-    spit('Version: ' + str(version));
-    spit('appdata: ' + appdata);
-
-    icons = glob.glob('ico/*.ico')
-    hover_text = "Godwatch Client"
-    menu_options = (
-        ('Report Now', None, report_and_retrieve),
-    )
-
-    def switch_icon(icon):
-        global sysicon
-        sysicon.icon = icon;
-        sysicon.refresh_icon();
-
-    def reset_timer(start_time, interval):
-        global timer
-        timer.cancel();
-        timer = Timer(abs(interval-(timeit.default_timer() - start_time)), report_and_retrieve);
-        timer.start();
-        print(timeit.default_timer())
-
-    def bye(sysTrayIcon):
-        timer.cancel();
-
-    def init_settings():
-        spit('Encrypting initial settings file.');
-        encrypt_settings();
-
-    from pathlib import Path
-    if Path(appdata+"initsettings.txt").is_file():
-        init_settings();
-
-    spit('Removing previous versions...');
-    if Path(sys.argv[0]+'.bak').is_file():
-        os.remove(sys.argv[0]+'.bak');
-        spit('Removed previous version');
+    if len(sys.argv) == 1:
+        servicemanager.Initialize()
+        servicemanager.PrepareToHostSingle(GodwatchService)
+        servicemanager.StartServiceCtrlDispatcher()
     else:
-        spit('No previous versions found');
-
-    spit('Initialize timer...');
-    timer = Timer(2, report_and_retrieve);
-    timer.start()
-    spit('Done.');
-
-    import ctypes
-    spit('Check administrator privileges.');
-    try:
-        admin_priv = os.getuid() == 0;
-    except:
-        admin_priv = ctypes.windll.shell32.IsUserAnAdmin() != 0;
-    if not admin_priv:
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, "", None, 1)
-        spit('Either I have been denied necessary sustenance or my heir apparent has inherited them. Either way, I shall die now.');
-        # POST-prompt
-        os._exit(0);
-    else:
-        spit('Already had admin priveleges. It seems I have more power than I thought.');
-
-    spit('Initialize the snazzy system tray icon...');
-    systrayicon.SysTrayIcon(icons[0], hover_text, menu_options, on_quit=bye, default_menu_index=1);
+        win32serviceutil.HandleCommandLine(GodwatchService)
