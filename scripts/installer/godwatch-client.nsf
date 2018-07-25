@@ -1,0 +1,128 @@
+object WizardForm: TISCustomForm
+  Left = 0
+  Top = 0
+  Width = 453
+  Height = 235
+  DesignPanel = frmISWizardPage.elDesignPanel
+  object NSISLabel1: TNSISLabel
+    Left = 8
+    Top = 7
+    Width = 36
+    FieldNum = 1
+    Right = 44
+    Bottom = 20
+    Flags = []
+    Text = 'Server:'
+  end
+  object NSISLabel2: TNSISLabel
+    Left = 8
+    Top = 41
+    Width = 52
+    FieldNum = 2
+    Right = 60
+    Bottom = 54
+    Flags = []
+    Text = 'Username:'
+  end
+  object NSISLabel3: TNSISLabel
+    Left = 9
+    Top = 76
+    Width = 50
+    FieldNum = 3
+    Right = 59
+    Bottom = 89
+    Flags = []
+    Text = 'Password:'
+  end
+  object NSISLabel4: TNSISLabel
+    Left = 144
+    Top = 7
+    Width = 31
+    FieldNum = 4
+    Right = 175
+    Bottom = 20
+    Flags = []
+    Text = 'Client:'
+  end
+  object NSISLabel5: TNSISLabel
+    Left = 144
+    Top = 41
+    Width = 55
+    FieldNum = 5
+    Right = 199
+    Bottom = 54
+    Flags = []
+    Text = 'Tolerance:'
+  end
+  object NSISText1: TNSISText
+    Left = 8
+    Top = 20
+    Width = 121
+    Height = 21
+    TabOrder = 5
+    FieldNum = 6
+    Right = 129
+    Bottom = 41
+    Flags = []
+    State = 'localhost:7001'
+  end
+  object NSISText2: TNSISText
+    Left = 8
+    Top = 54
+    Width = 121
+    Height = 21
+    TabOrder = 6
+    FieldNum = 7
+    Right = 129
+    Bottom = 75
+    Flags = []
+    State = 'sysadmin'
+  end
+  object NSISPassword1: TNSISPassword
+    Left = 8
+    Top = 89
+    Width = 121
+    Height = 21
+    TabOrder = 7
+    FieldNum = 8
+    Right = 129
+    Bottom = 110
+    Flags = []
+    State = 'passkey'
+  end
+  object NSISText3: TNSISText
+    Left = 144
+    Top = 20
+    Width = 121
+    Height = 21
+    TabOrder = 8
+    FieldNum = 9
+    Right = 265
+    Bottom = 41
+    Flags = []
+  end
+  object NSISText4: TNSISText
+    Left = 144
+    Top = 54
+    Width = 25
+    Height = 21
+    TabOrder = 9
+    FieldNum = 10
+    Right = 169
+    Bottom = 75
+    Flags = []
+    State = '1.1'
+  end
+  object NSISCheckBox1: TNSISCheckBox
+    Left = 144
+    Top = 94
+    Width = 63
+    Caption = 'Existing?'
+    TabOrder = 10
+    FieldNum = 11
+    Right = 207
+    Bottom = 107
+    Flags = []
+    Text = 'Existing?'
+  end
+end
