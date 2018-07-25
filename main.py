@@ -4,6 +4,7 @@ from shutil import copyfile
 from simplecrypt import encrypt, decrypt
 import win32serviceutil, win32service, win32event, servicemanager
 from pathlib import Path
+import datetime
 
 class GodwatchService(win32serviceutil.ServiceFramework):
     _svc_name_ = "GodwatchClient"
@@ -55,7 +56,7 @@ class GodwatchApp(Thread):
         self.main()
 
     def log(self, mess):
-        log = open(self.appdata+'logfile.log','a+');
+        log = open(self.appdata+datetime.datetime.today().strftime('%Y-%m-%d')+'_logfile.log','a+');
         log.write(str(datetime.datetime.now()) + ":  " + mess+"\n");
         log.close();
 
@@ -90,7 +91,19 @@ class GodwatchApp(Thread):
             os.rename(fn, fn+'.bak');
             os.rename('newver.exe', fn);
 
-            os.startfile(fn);
+            batch = open(self.appdata+"restart.bat", "a+");
+            batch.write("%SYSTEMDRIVE%\n");
+            batch.write("timeout /t 2\n");
+            batch.write("sc start GodwatchClient");
+            batch.close();
+
+            try:
+                from subprocess import DEVNULL
+            except ImportError:
+                DEVNULL = os.open(os.devnull, os.O_RDWR)
+
+            import subprocess
+            subprocess.Popen(["restart.bat"], stdout=DEVNULL, stdin=DEVNULL, stderr=DEVNULL, shell=True)
 
             os._exit(0);
 
@@ -98,7 +111,7 @@ class GodwatchApp(Thread):
 
         except Exception:
 
-            #traceback.print_exc()
+            self.spit(traceback.format_exc());
 
             return False
 
@@ -109,9 +122,6 @@ class GodwatchApp(Thread):
         start_time = timeit.default_timer();
 
         try:
-
-            #self.spit("Loading Settings...");
-            #settings = self.load_settings_hidden(); # THIS IS THE TIMING PROBLEM!!!!!!!!!!!!!!!!!!!!
 
             self.spit("Reporting...");
             report = self.report_hidden(self.settings);
@@ -140,6 +150,7 @@ class GodwatchApp(Thread):
 
                         else:
                             self.spit("Update failed, please update manually.")
+                            self.remove_previous_versions()
                             self.reset_timer(start_time, int(save)/1000);
 
                     else:
@@ -151,7 +162,7 @@ class GodwatchApp(Thread):
             else:
                 self.reset_timer(start_time, int(self.settings[4])/1000);
 
-        except: # This is blocking sys.exit and any exceptions!!!
+        except:
             self.spit(traceback.format_exc());
             self.reset_timer(start_time, int(self.settings[4])/1000);
 
@@ -233,13 +244,20 @@ class GodwatchApp(Thread):
         self.spit('Encrypting initial settings file.');
         self.encrypt_settings();
 
+    def remove_previous_versions(self):
+        if Path(sys.argv[0]+'.bak').is_file():
+            os.remove(sys.argv[0]+'.bak');
+            self.spit('Removed previous version');
+        else:
+            self.spit('No previous versions found');
+
     def main(self):
 
         os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
         self.appdata = os.path.dirname(os.path.abspath(sys.argv[0]))+"\\"
 
-        self.version = 0.3
+        self.version = 0.43
 
         self.spit('Started Godwatch Client');
         self.spit('Set working directory, appdata, and version.')
@@ -249,21 +267,20 @@ class GodwatchApp(Thread):
         if Path(self.appdata+"initsettings.txt").is_file():
             self.init_settings();
 
+        if Path(self.appdata+"restart.bat").is_file():
+            os.remove(self.appdata+"restart.bat");
+
         self.settings = self.load_settings_hidden()
 
-        self.spit('Removing previous versions...');
-        if Path(sys.argv[0]+'.bak').is_file():
-            os.remove(sys.argv[0]+'.bak');
-            self.spit('Removed previous version');
-        else:
-            self.spit('No previous versions found');
+        self.spit('Removing previous versions...')
+        self.remove_previous_versions()
 
         self.spit('Initialize timer...');
         self.timer = Timer(2, self.report_and_retrieve);
         self.timer.start()
         self.spit('Done.');
 
-        import ctypes
+        import ctypes, subprocess
         self.spit('Check administrator privileges.');
         try:
             admin_priv = os.getuid() == 0;
